@@ -16,6 +16,6 @@ app.config.from_object('config')
 pages = FlatPages(app)
 images = Images(app)
 
-from fragforce.views import pages
+from website.views import pages
 
 app.register_blueprint(pages.mod)
