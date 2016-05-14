@@ -16,6 +16,29 @@ app.config.from_object('config')
 pages = FlatPages(app)
 images = Images(app)
 
+from website.views import general
 from website.views import pages
 
+app.register_blueprint(general.mod)
 app.register_blueprint(pages.mod)
+
+@app.context_processor
+def context_data():
+  def is_active(endpoint=None, section=None, noclass=False):
+    rtn = ""
+    if noclass:
+      rtn = 'active'
+    else:
+      rtn = 'class=active'
+    if endpoint and section:
+      if 'section' in request.view_args:
+        if request.url_rule.endpoint == endpoint and request.view_args['section'] == section:
+          return rtn
+    elif endpoint:
+      return rtn if request.url_rule.endpoint == endpoint else ''
+    elif section:
+      if 'section' in request.view_args:
+        return rtn if request.view_args['section'] == section else ''
+    return ''
+  return dict(is_active=is_active)
+
