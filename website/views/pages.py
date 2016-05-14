@@ -1,5 +1,5 @@
 from datetime import date, datetime
-from site import app
+from website import app
 from flask import Blueprint, render_template, session, redirect, url_for, \
         request, abort
 from flask_flatpages import FlatPages
