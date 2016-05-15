@@ -115,3 +115,10 @@ def section_archives_year(section, year):
   years = get_years(get_pages(pages, section=section))
   things = get_pages(pages, section=section, year=year)
   return render_template(template, pages=things, section=section, years=years, year=year)
+
+@mod.route('/')
+def all_pages():
+  template = 'general/index.html'
+  things = get_pages(pages, limit=app.config['SECTION_MAX_LINKS'])
+  years = get_years(get_pages(pages))
+  return render_template(template, pages=things, years=years)

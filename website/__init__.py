@@ -40,5 +40,6 @@ def context_data():
       if 'section' in request.view_args:
         return rtn if request.view_args['section'] == section else ''
     return ''
-  return dict(is_active=is_active)
+  return dict(is_active=is_active,
+              debug=app.debug)
 
