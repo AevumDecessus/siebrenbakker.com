@@ -9,7 +9,7 @@ import os
 mod = Blueprint('pages', __name__)
 pages = FlatPages(app)
 
-def get_pages(pages, offset=None, limit=None, section=None, year=None, before=None, after=None):
+def get_pages(pages, offset=None, limit=None, section=None, subsection=None, year=None, before=None, after=None):
   """ Retrieves pages that match specific criteria
   """
   things = list(pages)
@@ -17,12 +17,18 @@ def get_pages(pages, offset=None, limit=None, section=None, year=None, before=No
   for thing in things:
     if not thing.meta.get('section'):
       thing.meta['section'] = thing.path.split('/')[0]
+    if not thing.meta.get('subsection'):
+      # if subsection isn't set manually, only set it if the path is long enough
+      if len(thing.path.split('/')) > 2:
+        thing.meta['subsection'] = thing.path.split('/')[1]
   # filter unpublished
   if not app.debug:
     things = [p for p in things if p.meta.get('published') is True]
   # filter section
   if section:
     things = [p for p in things if p.meta.get('section') == section]
+  if subsection:
+    things = [p for p in things if p.meta.get('subsection') == subsection]
   # filter year
   if year:
     things = [p for p in things if p.meta.get('date').year == year]
@@ -55,8 +61,19 @@ def get_sections(pages):
   for thing in things:
     if not thing.meta.get('section'):
       thing.meta['section'] = thing.path.split('/')[0]
-  sections = list(set([page.meta.get('section') for page in pages]))
-  return sections
+  return sorted(list(set([thing.meta.get('section') for thing in things])))
+
+def get_subsections(pages, section):
+  pages = list(get_pages(pages, section=section))
+  things = []
+  for page in pages:
+    if not page.meta.get('subsection'):
+      if len(page.path.split('/')) > 2:
+        page.meta['subsection'] = page.path.split('/')[1]
+        things.append(page)
+    else:
+      things.append(page)
+  return sorted(list(set([thing.meta.get('subsection') for thing in things])))
 
 def get_years(pages):
   years = list(set([page.meta.get('date').year for page in pages]))
@@ -65,6 +82,8 @@ def get_years(pages):
 
 def section_exists(section):
   return not len(get_pages(pages, section=section)) == 0
+def subsection_exists(section, subsection):
+  return not len(get_pages(pages, section=section, subsection=subsection)) == 0
 
 @mod.route('/<path:path>/')
 def page(path):
@@ -77,8 +96,7 @@ def page(path):
     abort(404)
   templates = []
   templates.append(page.meta.get('template', '%s/page.html' % section))
-  # Append the default template as a failover
-  templates.append('default_pages/page.html')
+  templates.append('default_templates/page.html')
   rtn_images = []
   if os.path.isdir(os.path.join(app.static_folder, 'images', path)):
     raw_images = os.listdir(os.path.join(app.static_folder, 'images', path))
@@ -97,10 +115,23 @@ def section(section):
     abort(404)
   templates = []
   templates.append('%s/index.html' % section)
-  templates.append('default_pages/index.html')
+  templates.append('default_templates/index.html')
   things = get_pages(pages, limit=app.config['SECTION_MAX_LINKS'], section=section)
   years = get_years(get_pages(pages, section=section))
   return render_template(templates, pages=things, section=section, years=years)
+
+@mod.route('/<string:section>/<string:subsection>')
+def subsection(section, subsection):
+  if not section_exists(section):
+    abort(404)
+  if not subsection_exists(section, subsection):
+    abort(404)
+  templates = []
+  templates.append('%s/index.html' % section)
+  templates.append('default_templates/index.html')
+  things = get_pages(pages, limit=app.config['SECTION_MAX_LINKS'], section=section, subsection=subsection)
+  years = get_years(get_pages(pages, section=section, subsection=subsection))
+  return render_template(templates, pages=things, section=section, subsection=subsection, years=years)
 
 @mod.route('/<string:section>/upcoming/')
 def section_upcoming(section):
@@ -108,7 +139,7 @@ def section_upcoming(section):
     abort(404)
   templates = []
   templates.append('%s/upcoming.html' % section)
-  templates.append('default_pages/upcoming.html')
+  templates.append('default_templates/upcoming.html')
   things = get_pages(pages, section=section, after=date.today())
   years = get_years(get_pages(pages, section=section))
   return render_template(templates, pages=things, section=section, years=years)
@@ -119,7 +150,7 @@ def section_past(section):
     abort(404)
   templates = []
   templates.append('%s/past.html' % section)
-  templates.append('default_pages/past.html')
+  templates.append('default_templates/past.html')
   things = get_pages(pages, section=section, before=date.today())
   years = get_years(get_pages(pages, section=section))
   return render_template(templates, pages=things, section=section, years=years)
@@ -130,7 +161,7 @@ def section_archives_year(section, year):
     abort(404)
   templates = []
   templates.append('%s/archives.html' % section)
-  templates.append('default_pages/archives.html')
+  templates.append('default_templates/archives.html')
   years = get_years(get_pages(pages, section=section))
   things = get_pages(pages, section=section, year=year)
   return render_template(templates, pages=things, section=section, years=years, year=year)
