@@ -97,16 +97,21 @@ def page(path):
   templates = []
   templates.append(page.meta.get('template', '%s/page.html' % section))
   templates.append('default_templates/page.html')
+
   rtn_images = []
   if os.path.isdir(os.path.join(app.static_folder, 'images', path)):
     raw_images = os.listdir(os.path.join(app.static_folder, 'images', path))
-    if len(raw_images) > 3:
-      choices = sample(raw_images, 3)
+    if not page.meta.get('all_images', False):
+      if len(raw_images) > 3:
+        choices = sample(raw_images, 3)
+      else:
+        choices = raw_images
+      for raw_image in choices:
+        # Flask-Images already knows to look in the static folder, so only include the rest
+        rtn_images.append(os.path.join('images', path, raw_image))
     else:
-      choices = raw_images
-    for raw_image in choices:
-      # Flask-Images already knows to look in the static folder, so only include the rest
-      rtn_images.append(os.path.join('images', path, raw_image))
+      for raw_image in raw_images:
+        rtn_images.append(os.path.join('images', path, raw_image))
   return render_template(templates, page=page, section=section, images=rtn_images)
 
 @mod.route('/<string:section>/')
